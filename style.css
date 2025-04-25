@@ -1,126 +1,122 @@
 body {
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
-    background-color: #f0f0f0;
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  background-color: #f0f0f0;
 }
 
 .chess-container {
-    text-align: center;
-    background-color: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .chess-board {
-    display: grid;
-    grid-template-columns: repeat(8, 60px);
-    grid-template-rows: repeat(8, 60px);
-    gap: 0;
-    margin: 20px auto;
-    border: 2px solid #333;
+  display: grid;
+  grid-template-columns: repeat(8, 60px);
+  grid-template-rows: repeat(8, 60px);
+  gap: 0;
+  margin: 20px auto;
+  border: 2px solid #333;
 }
 
 .square {
-    width: 60px;
-    height: 60px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 40px;
-    cursor: pointer;
-    user-select: none;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 40px;
+  cursor: pointer;
+  user-select: none;
 }
 
 .light {
-    background-color: #f0d9b5;
+  background-color: #f0d9b5;
 }
 
 .dark {
-    background-color: #b58863;
+  background-color: #b58863;
 }
 
 .highlight {
-    background-color: rgba(0, 255, 0, 0.5);
+  background-color: rgba(0, 255, 0, 0.5);
 }
 
 .selected {
-    background-color: rgba(255, 255, 0, 0.5);
+  background-color: rgba(255, 255, 0, 0.5);
 }
 
 .info-panel {
-    margin-top: 20px;
-    padding: 10px;
-    background-color: #eee;
-    border-radius: 5px;
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #eee;
+  border-radius: 5px;
 }
 
-.mode-selector {
-    margin-bottom: 20px;
+.mode-selector, .connection-panel {
+  margin-bottom: 20px;
 }
 
-.mode-selector label {
-    margin-right: 10px;
-    font-size: 16px;
-}
-
-.mode-selector select {
-    padding: 5px;
-    font-size: 16px;
-    border-radius: 4px;
-    margin-right: 10px;
+.connection-panel input {
+  padding: 5px;
+  font-size: 16px;
+  border-radius: 4px;
+  margin-left: 10px;
+  margin-right: 10px;
 }
 
 #turn-indicator span {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 #reset-btn {
-    padding: 8px 16px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    margin-top: 10px;
+  padding: 8px 16px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 10px;
 }
 
 #reset-btn:hover {
-    background-color: #45a049;
+  background-color: #45a049;
 }
 
 h1 {
-    color: #333;
+  color: #333;
 }
 
 .notification {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 10px 20px;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-    z-index: 1000;
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  z-index: 1000;
 }
 
 .notification.success {
-    background-color: #4CAF50;
-    color: white;
+  background-color: #4CAF50;
+  color: white;
 }
 
 .notification.error {
-    background-color: #f44336;
-    color: white;
+  background-color: #f44336;
+  color: white;
 }
 
 .notification.show {
-    opacity: 1;
+  opacity: 1;
 }
