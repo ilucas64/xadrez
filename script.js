@@ -398,8 +398,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const captured = chessBoard[toRow][toCol];
                         
                         chessBoard[toRow][toCol] = piece;
-                        chessBoard[fromRow][ strumenti: '',
-
+                        chessBoard[fromRow][fromCol] = '';
+                        
                         const evalScore = minimax(depth - 1, alpha, beta, false);
                         maxEval = Math.max(maxEval, evalScore);
                         alpha = Math.max(alpha, evalScore);
