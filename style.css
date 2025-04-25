@@ -1,0 +1,98 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+}
+
+.chess-container {
+    text-align: center;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.chess-board {
+    display: grid;
+    grid-template-columns: repeat(8, 60px);
+    grid-template-rows: repeat(8, 60px);
+    gap: 0;
+    margin: 20px auto;
+    border: 2px solid #333;
+}
+
+.square {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 40px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.light {
+    background-color: #f0d9b5;
+}
+
+.dark {
+    background-color: #b58863;
+}
+
+.highlight {
+    background-color: rgba(0, 255, 0, 0.5);
+}
+
+.selected {
+    background-color: rgba(255, 255, 0, 0.5);
+}
+
+.info-panel {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #eee;
+    border-radius: 5px;
+}
+
+.mode-selector {
+    margin-bottom: 20px;
+}
+
+.mode-selector label {
+    margin-right: 10px;
+    font-size: 16px;
+}
+
+.mode-selector select {
+    padding: 5px;
+    font-size: 16px;
+    border-radius: 4px;
+}
+
+#turn-indicator span {
+    font-weight: bold;
+}
+
+#reset-btn {
+    padding: 8px 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+#reset-btn:hover {
+    background-color: #45a049;
+}
+
+h1 {
+    color: #333;
+}
