@@ -81,8 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             square.classList.remove('black', 'white');
                         }
                         
-                        // Remove event listeners antigos e adiciona novos
-                        square.addEventListener('click', () => handleSquareClick(row, col));
+                        // Adiciona event listener para cliques
+                        square.addEventListener('click', () => {
+                            console.log(`Evento de clique disparado para [${row}, ${col}]`);
+                            handleSquareClick(row, col);
+                        });
                         board.appendChild(square);
                     }
                 }
@@ -98,16 +101,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function handleSquareClick(row, col) {
             try {
+                console.log(`handleSquareClick chamado para [${row}, ${col}]`);
                 if (gameState !== 'playing') {
                     console.log('Jogo não está em andamento. Estado:', gameState);
                     return;
                 }
                 
                 const piece = chessBoard[row][col];
-                console.log(`Clique em [${row}, ${col}] - Peça: ${piece}, Jogador atual: ${currentPlayer}`);
+                console.log(`Peça na posição [${row}, ${col}]: ${piece}, Jogador atual: ${currentPlayer}`);
                 
                 if (selectedPiece) {
                     const [fromRow, fromCol] = selectedPiece;
+                    console.log(`Peça selecionada anteriormente em [${fromRow}, ${fromCol}]`);
                     if (isValidMove(fromRow, fromCol, row, col)) {
                         console.log(`Movimento válido de [${fromRow}, ${fromCol}] para [${row}, ${col}]`);
                         movePiece(fromRow, fromCol, row, col);
@@ -119,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             setTimeout(makeAIMove, 500);
                         }
                     } else if (fromRow === row && fromCol === col) {
-                        console.log('Desselecionando peça em [${row}, ${col}]');
+                        console.log(`Desselecionando peça em [${row}, ${col}]`);
                         selectedPiece = null;
                         removeHighlightsAndSelection();
                     } else if (piece && isSameColor(piece, chessBoard[fromRow][fromCol])) {
@@ -148,6 +153,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         console.log('Peça não pode ser selecionada. Jogador atual:', currentPlayer, 'Peça:', piece);
                     }
+                } else {
+                    console.log('Nenhuma peça para selecionar em [${row}, ${col}]');
                 }
             } catch (error) {
                 console.error('Erro em handleSquareClick:', error);
@@ -207,25 +214,54 @@ document.addEventListener('DOMContentLoaded', () => {
                     case 'p':
                         const direction = piece === 'p' ? 1 : -1;
                         if (fromCol === toCol && !targetPiece) {
-                            if (toRow === fromRow + direction) return true;
+                            if (toRow === fromRow + direction) {
+                                console.log('Movimento válido: peão avançando 1 casa');
+                                return true;
+                            }
                             if ((piece === 'p' && fromRow === 1) || (piece === 'P' && fromRow === 6)) {
                                 if (toRow === fromRow + 2 * direction && !chessBoard[fromRow + direction][fromCol]) {
+                                    console.log('Movimento válido: peão avançando 2 casas');
                                     return true;
                                 }
                             }
                         }
-                        if (dx === 1 && toRow === fromRow + direction && targetPiece) return true;
+                        if (dx === 1 && toRow === fromRow + direction && targetPiece) {
+                            console.log('Movimento válido: peão capturando peça');
+                            return true;
+                        }
                         break;
                     case 'r':
-                        return (fromRow === toRow || fromCol === toCol) && isPathClear(fromRow, fromCol, toRow, toCol);
+                        if (fromRow === toRow || fromCol === toCol) {
+                            if (isPathClear(fromRow, fromCol, toRow, toCol)) {
+                                console.log('Movimento válido: torre');
+                                return true;
+                            }
+                        }
+                        break;
                     case 'n':
-                        return (dx === 1 && dy === 2) || (dx === 2 && dy === 1);
+                        if ((dx === 1 && dy === 2) || (dx === 2 && dy === 1)) {
+                            console.log('Movimento válido: cavalo');
+                            return true;
+                        }
+                        break;
                     case 'b':
-                        return dx === dy && isPathClear(fromRow, fromCol, toRow, toCol);
+                        if (dx === dy && isPathClear(fromRow, fromCol, toRow, toCol)) {
+                            console.log('Movimento válido: bispo');
+                            return true;
+                        }
+                        break;
                     case 'q':
-                        return (dx === dy || fromRow === toRow || fromCol === toCol) && isPathClear(fromRow, fromCol, toRow, toCol);
+                        if ((dx === dy || fromRow === toRow || fromCol === toCol) && isPathClear(fromRow, fromCol, toRow, toCol)) {
+                            console.log('Movimento válido: rainha');
+                            return true;
+                        }
+                        break;
                     case 'k':
-                        return dx <= 1 && dy <= 1;
+                        if (dx <= 1 && dy <= 1) {
+                            console.log('Movimento válido: rei');
+                            return true;
+                        }
+                        break;
                 }
                 console.log('Movimento inválido para a peça:', piece, 'de', [fromRow, fromCol], 'para', [toRow, toCol]);
                 return false;
@@ -242,10 +278,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 let row = fromRow + rowStep;
                 let col = fromCol + colStep;
                 while (row !== toRow || col !== toCol) {
-                    if (chessBoard[row][col] !== '') return false;
+                    if (chessBoard[row][col] !== '') {
+                        console.log('Caminho bloqueado em:', [row, col]);
+                        return false;
+                    }
                     row += rowStep;
                     col += colStep;
                 }
+                console.log('Caminho livre de', [fromRow, fromCol], 'para', [toRow, toCol]);
                 return true;
             } catch (error) {
                 console.error('Erro em isPathClear:', error);
@@ -262,6 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const square = document.querySelector(`.square[data-row="${r}"][data-col="${c}"]`);
                             if (square) {
                                 square.classList.add('highlight');
+                                console.log(`Destacando movimento possível em [${r}, ${c}]`);
                             }
                         }
                     }
@@ -276,6 +317,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const square = document.querySelector(`.square[data-row="${row}"][data-col="${col}"]`);
                 if (square) {
                     square.classList.add('selected');
+                    console.log(`Destacando peça selecionada em [${row}, ${col}]`);
+                } else {
+                    console.error(`Quadrado não encontrado em [${row}, ${col}]`);
                 }
             } catch (error) {
                 console.error('Erro em highlightSquare:', error);
@@ -288,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     square.classList.remove('highlight');
                     square.classList.remove('selected');
                 });
+                console.log('Removendo destaques e seleções');
             } catch (error) {
                 console.error('Erro em removeHighlightsAndSelection:', error);
             }
@@ -308,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 turnIndicator.textContent = currentPlayer === 'white' ? 'Brancas' : 'Pretas';
                 turnIndicator.style.color = currentPlayer === 'white' ? '#333' : '#000';
+                console.log('Informações do jogo atualizadas. Vez de:', turnIndicator.textContent);
             } catch (error) {
                 console.error('Erro em updateGameInfo:', error);
             }
@@ -753,7 +799,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        resetButton.addEventListener('click', resetGame);
+        resetButton.addEventListener('click', () => {
+            console.log('Botão de reset clicado');
+            resetGame();
+        });
+        
         initializeBoard();
     } catch (error) {
         console.error('Erro na inicialização do jogo:', error);
