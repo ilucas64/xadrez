@@ -20,7 +20,7 @@ body {
     width: 480px;
     height: 480px;
     background-color: #fff;
-    visibility: visible !important; /* Garante que o tabuleiro não esteja escondido */
+    visibility: visible !important;
 }
 
 .square {
@@ -31,7 +31,7 @@ body {
     align-items: center;
     font-size: 36px;
     cursor: pointer;
-    visibility: visible !important; /* Garante que os quadrados não estejam escondidos */
+    visibility: visible !important;
 }
 
 .light {
