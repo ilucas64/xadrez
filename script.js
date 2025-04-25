@@ -330,8 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     socket.emit('reset', { roomId });
                     showNotification('Jogo reiniciado.', 'success');
                 }
-
-
             } catch (error) {
                 console.error('Erro em resetGame:', error);
                 showNotification('Erro ao reiniciar o jogo.', 'error');
@@ -400,8 +398,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const captured = chessBoard[toRow][toCol];
                         
                         chessBoard[toRow][toCol] = piece;
-                        chessBoard[fromRow][fromCol] = '';
-                        
+                        chessBoard[fromRow][ strumenti: '',
+
                         const evalScore = minimax(depth - 1, alpha, beta, false);
                         maxEval = Math.max(maxEval, evalScore);
                         alpha = Math.max(alpha, evalScore);
@@ -489,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function setupSocket() {
             try {
-                const serverUrl = 'https://chess-server.onrender.com'; // Substitua pelo URL do Render
+                const serverUrl = 'https://chess-server.onrender.com'; // Substitua pelo URL correto do Render
                 if (typeof io !== 'undefined') {
                     socket = io(serverUrl, { 
                         reconnectionAttempts: 3,
