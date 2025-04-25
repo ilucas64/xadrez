@@ -43,7 +43,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xadrez no Navegador</title>
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="chess-container">
@@ -53,7 +53,6 @@
             <select id="game-mode">
                 <option value="pvp">Jogador vs Jogador (Local)</option>
                 <option value="pve">Jogador vs IA</option>
-                <option value="online">Jogador vs Jogador (Online)</option>
             </select>
             <label for="difficulty" id="difficulty-label" style="display: none;">Dificuldade:</label>
             <select id="difficulty" style="display: none;">
@@ -61,13 +60,6 @@
                 <option value="medium">Médio</option>
                 <option value="hard">Difícil</option>
             </select>
-        </div>
-        <div class="room-selector" id="room-selector" style="display: none;">
-            <label for="room-id">ID da Sala:</label>
-            <input type="text" id="room-id" placeholder="Digite o ID da sala">
-            <button id="join-room-btn">Entrar na Sala</button>
-            <button id="create-room-btn">Criar Nova Sala</button>
-            <div id="room-status"></div>
         </div>
         <div id="notification" class="notification"></div>
         <div id="board" class="chess-board"></div>
@@ -77,7 +69,6 @@
             <button id="reset-btn">Reiniciar Jogo</button>
         </div>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
-    <script src="./script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
