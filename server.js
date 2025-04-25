@@ -18,7 +18,21 @@ io.on('connection', (socket) => {
 
     socket.on('createRoom', () => {
         const roomId = Math.random().toString(36).substr(2, 9);
-        rooms[roomId] = { players: [socket.id], colors: { [socket.id]: 'white' } };
+        rooms[roomId] = { 
+            players: [socket.id], 
+            colors: { [socket.id]: 'white' },
+            board: [
+                ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+                ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+                ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+            ],
+            currentPlayer: 'white'
+        };
         socket.join(roomId);
         socket.emit('roomCreated', { roomId });
         console.log(`Sala criada: ${roomId}`);
@@ -34,23 +48,48 @@ io.on('connection', (socket) => {
             console.log(`Usuário ${socket.id} entrou na sala ${roomId}`);
         } else {
             socket.emit('roomFull');
+            console.log(`Tentativa de entrar em sala cheia/inexistente: ${roomId}`);
         }
     });
 
     socket.on('move', ({ roomId, move }) => {
-        socket.to(roomId).emit('move', { move });
+        if (rooms[roomId]) {
+            const { from, to } = move;
+            const piece = rooms[roomId].board[from[0]][from[1]];
+            rooms[roomId].board[to[0]][to[1]] = piece;
+            rooms[roomId].board[from[0]][from[1]] = '';
+            socket.to(roomId).emit('move', { move });
+        }
     });
 
     socket.on('updateTurn', ({ roomId, currentPlayer }) => {
-        socket.to(roomId).emit('updateTurn', { currentPlayer });
+        if (rooms[roomId]) {
+            rooms[roomId].currentPlayer = currentPlayer;
+            socket.to(roomId).emit('updateTurn', { currentPlayer });
+        }
     });
 
     socket.on('reset', ({ roomId }) => {
-        socket.to(roomId).emit('reset');
+        if (rooms[roomId]) {
+            rooms[roomId].board = [
+                ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+                ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+                ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+            ];
+            rooms[roomId].currentPlayer = 'white';
+            io.to(roomId).emit('reset');
+        }
     });
 
     socket.on('gameOver', ({ roomId, winner }) => {
-        io.to(roomId).emit('gameOver', { winner });
+        if (rooms[roomId]) {
+            io.to(roomId).emit('gameOver', { winner });
+        }
     });
 
     socket.on('disconnect', () => {
@@ -63,7 +102,7 @@ io.on('connection', (socket) => {
                 if (room.players.length === 0) {
                     delete rooms[roomId];
                 } else {
-                    io.to(roomId).emit('playerJoined', { message: 'O outro jogador desconectou.' });
+                    io.to(roomId).emit('playerDisconnected', { message: 'O outro jogador desconectou.' });
                 }
                 console.log(`Usuário ${socket.id} desconectado da sala ${roomId}`);
             }

@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!board) {
             console.error('Elemento #board não encontrado');
+            showNotification('Erro: Elemento do tabuleiro não encontrado.', 'error');
             return;
         }
         
@@ -50,11 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
             'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 100
         };
         
-        function showNotification(message) {
+        function showNotification(message, type = 'success') {
             notification.textContent = message;
-            notification.classList.add('show');
+            notification.className = `notification ${type} show`;
             setTimeout(() => {
-                notification.classList.remove('show');
+                notification.className = 'notification';
             }, 3000);
         }
         
@@ -84,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Tabuleiro inicializado com sucesso');
             } catch (error) {
                 console.error('Erro ao inicializar o tabuleiro:', error);
+                showNotification('Erro ao inicializar o tabuleiro.', 'error');
             }
         }
         
@@ -134,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 console.error('Erro em handleSquareClick:', error);
+                showNotification('Erro ao processar clique.', 'error');
             }
         }
         
@@ -152,6 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 checkGameState();
             } catch (error) {
                 console.error('Erro em movePiece:', error);
+                showNotification('Erro ao mover peça.', 'error');
             }
         }
         
@@ -259,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 console.error('Erro em switchPlayer:', error);
+                showNotification('Erro ao alternar jogador.', 'error');
             }
         }
         
@@ -288,15 +293,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (gameMode === 'online' && socket) {
                         socket.emit('gameOver', { roomId, winner: 'black' });
                     }
+                    showNotification('Xeque-mate! Pretas vencem!', 'success');
                 } else if (!blackKing) {
                     gameState = 'checkmate';
                     statusDisplay.textContent = 'Xeque-mate! Brancas vencem!';
                     if (gameMode === 'online' && socket) {
                         socket.emit('gameOver', { roomId, winner: 'white' });
                     }
+                    showNotification('Xeque-mate! Brancas vencem!', 'success');
                 }
             } catch (error) {
                 console.error('Erro em checkGameState:', error);
+                showNotification('Erro ao verificar estado do jogo.', 'error');
             }
         }
         
@@ -320,9 +328,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 initializeBoard();
                 if (gameMode === 'online' && socket && roomId) {
                     socket.emit('reset', { roomId });
+                    showNotification('Jogo reiniciado.', 'success');
                 }
             } catch (error) {
                 console.error('Erro em resetGame:', error);
+                showNotification('Erro ao reiniciar o jogo.', 'error');
             }
         }
         
@@ -344,7 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 }
-                console.log(`Movimentos possíveis para ${player}:`, moves);
                 return moves;
             } catch (error) {
                 console.error('Erro em getAllPossibleMoves:', error);
@@ -431,22 +440,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function makeAIMove() {
             try {
-                console.log('makeAIMove chamado, dificuldade:', difficulty);
-                if (gameState !== 'playing' || currentPlayer !== 'black') {
-                    console.log('IA não acionada: gameState=', gameState, 'currentPlayer=', currentPlayer);
-                    return;
-                }
+                if (gameState !== 'playing' || currentPlayer !== 'black') return;
                 
                 const moves = getAllPossibleMoves('black');
-                if (moves.length === 0) {
-                    console.log('Nenhum movimento possível para a IA');
-                    return;
-                }
+                if (moves.length === 0) return;
                 
                 let move;
                 if (difficulty === 'easy') {
                     move = moves[Math.floor(Math.random() * moves.length)];
-                    console.log('IA (Fácil) escolheu movimento aleatório:', move);
                 } else {
                     let depth = difficulty === 'medium' ? 2 : 4;
                     let bestMove = null;
@@ -462,8 +463,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         chessBoard[fromRow][fromCol] = '';
                         
                         const moveValue = minimax(depth - 1, -Infinity, Infinity, false);
-                        console.log(`Movimento ${fromRow},${fromCol} -> ${toRow},${toCol}: valor=${moveValue}`);
-                        
                         chessBoard[fromRow][fromCol] = piece;
                         chessBoard[toRow][toCol] = captured;
                         
@@ -474,36 +473,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     
                     move = bestMove;
-                    console.log('IA escolheu movimento:', move, 'valor=', bestValue);
                 }
                 
                 if (move) {
                     movePiece(move.from[0], move.from[1], move.to[0], move.to[1]);
                     switchPlayer();
-                } else {
-                    console.log('Nenhum movimento selecionado pela IA');
                 }
             } catch (error) {
                 console.error('Erro em makeAIMove:', error);
+                showNotification('Erro na jogada da IA.', 'error');
             }
         }
         
         function setupSocket() {
             try {
-                const serverUrl = 'http://localhost:3000'; // Substitua pelo URL do servidor hospedado
+                // Substitua pelo URL do seu servidor no Render
+                const serverUrl = 'http://localhost:3000'; // Ex.: 'https://chess-server.onrender.com'
                 if (typeof io !== 'undefined') {
-                    socket = io(serverUrl, { reconnection: false });
+                    socket = io(serverUrl, { 
+                        reconnectionAttempts: 3,
+                        timeout: 5000
+                    });
                     
                     socket.on('connect', () => {
                         console.log('Conectado ao servidor');
                         roomStatus.textContent = 'Conectado ao servidor. Crie ou entre em uma sala.';
+                        showNotification('Conectado ao servidor!', 'success');
                     });
                     
                     socket.on('roomCreated', ({ roomId: newRoomId }) => {
                         roomId = newRoomId;
                         playerColor = 'white';
                         roomStatus.textContent = `Sala criada: ${roomId}. Aguardando o segundo jogador...`;
-                        showNotification(`Sala criada: ${roomId}`);
+                        showNotification(`Sala criada: ${roomId}`, 'success');
                         initializeBoard();
                     });
                     
@@ -511,19 +513,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         roomId = joinedRoomId;
                         playerColor = color;
                         roomStatus.textContent = `Conectado à sala ${roomId} como ${playerColor === 'white' ? 'Brancas' : 'Pretas'}.`;
-                        showNotification(`Você entrou na sala ${roomId} como ${playerColor === 'white' ? 'Brancas' : 'Pretas'}.`);
+                        showNotification(`Você entrou na sala ${roomId} como ${playerColor === 'white' ? 'Brancas' : 'Pretas'}.`, 'success');
                         initializeBoard();
                     });
                     
                     socket.on('playerJoined', () => {
-                        showNotification('Segundo jogador entrou. Jogo iniciado!');
+                        showNotification('Segundo jogador entrou. Jogo iniciado!', 'success');
                         roomStatus.textContent = 'Jogo iniciado!';
                         initializeBoard();
                     });
                     
                     socket.on('roomFull', () => {
                         roomStatus.textContent = 'Erro: Sala cheia ou inexistente.';
-                        showNotification('Erro: Sala cheia ou inexistente.');
+                        showNotification('Erro: Sala cheia ou inexistente.', 'error');
                     });
                     
                     socket.on('move', ({ move }) => {
@@ -538,28 +540,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     socket.on('reset', () => {
                         resetGame();
-                        showNotification('Jogo reiniciado.');
                     });
                     
                     socket.on('gameOver', ({ winner }) => {
                         gameState = 'checkmate';
                         statusDisplay.textContent = `Xeque-mate! ${winner === 'white' ? 'Brancas' : 'Pretas'} vencem!`;
-                        showNotification(`Xeque-mate! ${winner === 'white' ? 'Brancas' : 'Pretas'} vencem!`);
+                        showNotification(`Xeque-mate! ${winner === 'white' ? 'Brancas' : 'Pretas'} vencem!`, 'success');
                     });
                     
                     socket.on('connect_error', (error) => {
                         console.error('Erro de conexão com o servidor:', error);
                         roomStatus.textContent = 'Erro: Não foi possível conectar ao servidor.';
-                        showNotification('Erro: Não foi possível conectar ao servidor.');
+                        showNotification('Erro: Não foi possível conectar ao servidor.', 'error');
+                    });
+                    
+                    socket.on('disconnect', () => {
+                        console.log('Desconectado do servidor');
+                        roomStatus.textContent = 'Desconectado do servidor.';
+                        showNotification('Desconectado do servidor.', 'error');
                     });
                 } else {
                     console.warn('Socket.IO não carregado. Modo online indisponível.');
                     roomStatus.textContent = 'Modo online indisponível. Configure o servidor.';
-                    showNotification('Modo online indisponível.');
+                    showNotification('Modo online indisponível.', 'error');
                 }
             } catch (error) {
                 console.error('Erro em setupSocket:', error);
-                showNotification('Erro ao configurar o modo online.');
+                showNotification('Erro ao configurar o modo online.', 'error');
             }
         }
         
@@ -581,7 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetGame();
             } catch (error) {
                 console.error('Erro ao mudar modo de jogo:', error);
-                showNotification('Erro ao mudar modo de jogo.');
+                showNotification('Erro ao mudar modo de jogo.', 'error');
             }
         });
         
@@ -591,36 +598,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetGame();
             } catch (error) {
                 console.error('Erro ao mudar dificuldade:', error);
-                showNotification('Erro ao mudar dificuldade.');
+                showNotification('Erro ao mudar dificuldade.', 'error');
             }
         });
         
         createRoomBtn.addEventListener('click', () => {
             try {
-                if (socket) {
+                if (socket && socket.connected) {
                     socket.emit('createRoom');
                 } else {
                     roomStatus.textContent = 'Erro: Servidor não conectado.';
-                    showNotification('Erro: Servidor não conectado.');
+                    showNotification('Erro: Servidor não conectado.', 'error');
                 }
             } catch (error) {
                 console.error('Erro ao criar sala:', error);
-                showNotification('Erro ao criar sala.');
+                showNotification('Erro ao criar sala.', 'error');
             }
         });
         
         joinRoomBtn.addEventListener('click', () => {
             try {
                 const id = roomIdInput.value.trim();
-                if (id && socket) {
+                if (id && socket && socket.connected) {
                     socket.emit('joinRoom', { roomId: id });
                 } else {
                     roomStatus.textContent = 'Erro: Insira um ID válido ou conecte ao servidor.';
-                    showNotification('Erro: Insira um ID válido ou conecte ao servidor.');
+                    showNotification('Erro: Insira um ID válido ou conecte ao servidor.', 'error');
                 }
             } catch (error) {
                 console.error('Erro ao entrar na sala:', error);
-                showNotification('Erro ao entrar na sala.');
+                showNotification('Erro ao entrar na sala.', 'error');
             }
         });
         
@@ -628,11 +635,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeBoard();
     } catch (error) {
         console.error('Erro na inicialização do jogo:', error);
-        const notification = document.getElementById('notification');
-        if (notification) {
-            notification.textContent = 'Erro ao iniciar o jogo. Verifique o console.';
-            notification.classList.add('show');
-            setTimeout(() => notification.classList.remove('show'), 3000);
-        }
+        showNotification('Erro ao iniciar o jogo. Verifique o console.', 'error');
     }
 });
