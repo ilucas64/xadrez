@@ -59,22 +59,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     for (let col = 0; col < 8; col++) {
                         const square = document.createElement('div');
                         square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
-                        square.dataset.row = row;
-                        square.dataset.col = col;
+                        square.dataset.row = row.toString();
+                        square.dataset.col = col.toString();
                         
                         const piece = chessBoard[row][col];
                         if (piece) {
-                            square.textContent = pieceSymbols[piece];
+                            square.textContent = pieceSymbols[piece] || '';
                             square.dataset.piece = piece;
                             square.classList.add(piece === piece.toLowerCase() ? 'black' : 'white');
+                        } else {
+                            square.textContent = '';
+                            delete square.dataset.piece;
+                            square.classList.remove('black', 'white');
                         }
                         
-                        square.addEventListener('click', () => handleSquareClick(row, col));
-                        board.appendChild(square);
+                        // Remove event listeners antigos para evitar duplicação
+                        square.replaceWith(square.cloneNode(true));
+                        const newSquare = board.children[board.children.length - 1];
+                        newSquare.addEventListener('click', () => handleSquareClick(row, col));
+                        board.appendChild(newSquare);
                     }
                 }
+                console.log('Tabuleiro inicializado:', chessBoard);
                 updateGameInfo();
-                console.log('Tabuleiro inicializado com sucesso');
             } catch (error) {
                 console.error('Erro ao inicializar o tabuleiro:', error);
                 showNotification('Erro ao inicializar o tabuleiro.', 'error');
@@ -83,14 +90,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function handleSquareClick(row, col) {
             try {
-                if (gameState !== 'playing') return;
+                if (gameState !== 'playing') {
+                    console.log('Jogo não está em andamento. Estado:', gameState);
+                    return;
+                }
                 
-                const square = document.querySelector(`.square[data-row="${row}"][data-col="${col}"]`);
                 const piece = chessBoard[row][col];
+                console.log(`Clique em [${row}, ${col}] - Peça: ${piece}, Jogador atual: ${currentPlayer}`);
                 
                 if (selectedPiece) {
                     const [fromRow, fromCol] = selectedPiece;
                     if (isValidMove(fromRow, fromCol, row, col)) {
+                        console.log(`Movimento válido de [${fromRow}, ${fromCol}] para [${row}, ${col}]`);
                         movePiece(fromRow, fromCol, row, col);
                         selectedPiece = null;
                         removeHighlightsAndSelection();
@@ -100,13 +111,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             setTimeout(makeAIMove, 500);
                         }
                     } else if (fromRow === row && fromCol === col) {
+                        console.log('Desselecionando peça em [${row}, ${col}]');
                         selectedPiece = null;
                         removeHighlightsAndSelection();
                     } else if (piece && isSameColor(piece, chessBoard[fromRow][fromCol])) {
+                        console.log(`Selecionando nova peça em [${row}, ${col}]`);
                         selectedPiece = [row, col];
                         removeHighlightsAndSelection();
                         highlightSquare(row, col);
                         showPossibleMoves(row, col);
+                    } else {
+                        console.log('Movimento inválido. Desselecionando.');
+                        selectedPiece = null;
+                        removeHighlightsAndSelection();
                     }
                 } else if (piece) {
                     const isWhitePiece = piece === piece.toUpperCase();
@@ -115,9 +132,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                        (currentPlayer === 'black' && !isWhitePiece))) ||
                                      (gameMode === 'pve' && currentPlayer === 'white' && isWhitePiece);
                     if (canSelect) {
+                        console.log(`Selecionando peça em [${row}, ${col}]`);
                         selectedPiece = [row, col];
+                        removeHighlightsAndSelection();
                         highlightSquare(row, col);
                         showPossibleMoves(row, col);
+                    } else {
+                        console.log('Peça não pode ser selecionada. Jogador atual:', currentPlayer, 'Peça:', piece);
                     }
                 }
             } catch (error) {
@@ -134,14 +155,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function movePiece(fromRow, fromCol, toRow, toCol) {
             try {
+                console.log(`Movendo peça de [${fromRow}, ${fromCol}] para [${toRow}, ${toCol}]`);
                 const piece = chessBoard[fromRow][fromCol];
                 chessBoard[toRow][toCol] = piece;
                 chessBoard[fromRow][fromCol] = '';
                 
                 if (piece === 'P' && toRow === 0) {
+                    console.log('Promovendo peão branco a rainha');
                     chessBoard[toRow][toCol] = 'Q';
                     showNotification('Peão promovido a rainha!', 'success');
                 } else if (piece === 'p' && toRow === 7) {
+                    console.log('Promovendo peão preto a rainha');
                     chessBoard[toRow][toCol] = 'q';
                     showNotification('Peão promovido a rainha!', 'success');
                 }
@@ -157,10 +181,16 @@ document.addEventListener('DOMContentLoaded', () => {
         function isValidMove(fromRow, fromCol, toRow, toCol) {
             try {
                 const piece = chessBoard[fromRow][fromCol];
-                if (!piece) return false;
+                if (!piece) {
+                    console.log('Nenhuma peça na posição de origem:', [fromRow, fromCol]);
+                    return false;
+                }
                 
                 const targetPiece = chessBoard[toRow][toCol];
-                if (targetPiece && isSameColor(piece, targetPiece)) return false;
+                if (targetPiece && isSameColor(piece, targetPiece)) {
+                    console.log('Movimento inválido: peça aliada na posição de destino:', [toRow, toCol]);
+                    return false;
+                }
                 
                 const dx = Math.abs(toCol - fromCol);
                 const dy = Math.abs(toRow - fromRow);
@@ -189,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     case 'k':
                         return dx <= 1 && dy <= 1;
                 }
+                console.log('Movimento inválido para a peça:', piece, 'de', [fromRow, fromCol], 'para', [toRow, toCol]);
                 return false;
             } catch (error) {
                 console.error('Erro em isValidMove:', error);
@@ -216,11 +247,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function showPossibleMoves(row, col) {
             try {
+                console.log('Mostrando movimentos possíveis para peça em:', [row, col]);
                 for (let r = 0; r < 8; r++) {
                     for (let c = 0; c < 8; c++) {
                         if (isValidMove(row, col, r, c)) {
                             const square = document.querySelector(`.square[data-row="${r}"][data-col="${c}"]`);
-                            square.classList.add('highlight');
+                            if (square) {
+                                square.classList.add('highlight');
+                            }
                         }
                     }
                 }
@@ -232,7 +266,9 @@ document.addEventListener('DOMContentLoaded', () => {
         function highlightSquare(row, col) {
             try {
                 const square = document.querySelector(`.square[data-row="${row}"][data-col="${col}"]`);
-                square.classList.add('selected');
+                if (square) {
+                    square.classList.add('selected');
+                }
             } catch (error) {
                 console.error('Erro em highlightSquare:', error);
             }
@@ -252,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function switchPlayer() {
             try {
                 currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
+                console.log('Trocando jogador para:', currentPlayer);
                 updateGameInfo();
             } catch (error) {
                 console.error('Erro em switchPlayer:', error);
@@ -277,6 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
+            console.log('Rei não encontrado para:', player);
             return null;
         }
         
@@ -308,6 +346,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                      (player === 'black' && piece === piece.toLowerCase()))) {
                             for (let r = 0; r < 8; r++) {
                                 for (let c = 0; c < 8; c++) {
+
+
                                     if (isValidMove(row, col, r, c)) {
                                         moves.push({ from: [row, col], to: [r, c] });
                                     }
@@ -316,6 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 }
+                console.log(`Movimentos possíveis para ${player}:`, moves.length);
                 return moves;
             } catch (error) {
                 console.error('Erro em getAllPossibleMoves:', error);
@@ -421,7 +462,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 let score = 0;
                 
-                // Avaliação material
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
                         const piece = chessBoard[row][col];
@@ -429,29 +469,26 @@ document.addEventListener('DOMContentLoaded', () => {
                             const value = pieceValues[piece];
                             score += piece === piece.toUpperCase() ? value : -value;
                             
-                            // Bônus por controle do centro (e4, d4, e5, d5)
                             const centerPositions = [
-                                [3, 3], [3, 4], // d4, e4
-                                [4, 3], [4, 4]  // d5, e5
+                                [3, 3], [3, 4],
+                                [4, 3], [4, 4]
                             ];
                             if (centerPositions.some(pos => pos[0] === row && pos[1] === col)) {
                                 score += piece === piece.toUpperCase() ? 0.5 : -0.5;
                             }
                             
-                            // Bônus por desenvolvimento (cavalos e bispos fora da posição inicial)
                             if (piece.toLowerCase() === 'n' || piece.toLowerCase() === 'b') {
-                                if (piece === piece.toLowerCase()) { // Peças pretas
+                                if (piece === piece.toLowerCase()) {
                                     if (row !== 0 || (col !== 1 && col !== 6)) {
-                                        score -= 0.3; // Bônus por cavalo ou bispo preto desenvolvido
+                                        score -= 0.3;
                                     }
-                                } else { // Peças brancas
+                                } else {
                                     if (row !== 7 || (col !== 1 && col !== 6)) {
-                                        score += 0.3; // Bônus por cavalo ou bispo branco desenvolvido
+                                        score += 0.3;
                                     }
                                 }
                             }
                             
-                            // Bônus por torre em coluna aberta
                             if (piece.toLowerCase() === 'r') {
                                 let isOpenColumn = true;
                                 for (let r = 0; r < 8; r++) {
@@ -465,25 +502,22 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                             }
                             
-                            // Bônus por rainha ativa (fora da posição inicial)
                             if (piece.toLowerCase() === 'q') {
                                 if (piece === 'q' && (row !== 0 || col !== 3)) {
-                                    score -= 0.5; // Rainha preta ativa
+                                    score -= 0.5;
                                 } else if (piece === 'Q' && (row !== 7 || col !== 3)) {
-                                    score += 0.5; // Rainha branca ativa
+                                    score += 0.5;
                                 }
                             }
                         }
                     }
                 }
                 
-                // Bônus por mobilidade
                 const whiteMoves = getAllPossibleMoves('white').length;
                 const blackMoves = getAllPossibleMoves('black').length;
                 score += whiteMoves * 0.1;
                 score -= blackMoves * 0.1;
                 
-                // Penalidade por peões dobrados
                 for (let col = 0; col < 8; col++) {
                     let whitePawns = 0;
                     let blackPawns = 0;
@@ -491,11 +525,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (chessBoard[row][col] === 'P') whitePawns++;
                         if (chessBoard[row][col] === 'p') blackPawns++;
                     }
-                    if (whitePawns > 1) score -= (whitePawns - 1) * 0.5; // Penalidade por peões brancos dobrados
-                    if (blackPawns > 1) score += (blackPawns - 1) * 0.5; // Penalidade por peões pretos dobrados
+                    if (whitePawns > 1) score -= (whitePawns - 1) * 0.5;
+                    if (blackPawns > 1) score += (blackPawns - 1) * 0.5;
                 }
                 
-                // Penalidade por rei exposto
                 const whiteKing = findKing('white');
                 const blackKing = findKing('black');
                 if (whiteKing) {
@@ -536,22 +569,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     const captured = chessBoard[toRow][toCol];
                     let priority = 0;
                     
-                    // Prioridade para capturas
                     if (captured) {
                         const capturedValue = pieceValues[captured] || 0;
                         const pieceValue = pieceValues[piece] || 0;
-                        priority += capturedValue * 10; // Bônus por capturar peças de maior valor
-                        if (capturedValue > pieceValue) priority += 50; // Bônus extra por capturas vantajosas
+                        priority += capturedValue * 10;
+                        if (capturedValue > pieceValue) priority += 50;
                     }
                     
-                    // Prioridade para movimentos que colocam o rei adversário em xeque
                     chessBoard[toRow][toCol] = piece;
                     chessBoard[fromRow][fromCol] = '';
                     const opponentKing = findKing(opponent);
                     if (opponentKing) {
                         const [kingRow, kingCol] = opponentKing;
                         if (isSquareAttacked(kingRow, kingCol, player)) {
-                            priority += 100; // Bônus por xeque
+                            priority += 100;
                         }
                     }
                     chessBoard[fromRow][fromCol] = piece;
@@ -575,7 +606,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 const player = maximizingPlayer ? 'black' : 'white';
                 const moves = sortMoves(getAllPossibleMoves(player), player);
-                if (moves.length === 0) return maximizingPlayer ? -Infinity : Infinity;
+                if (moves.length === 0) {
+                    console.log('Nenhum movimento possível para:', player);
+                    return maximizingPlayer ? -Infinity : Infinity;
+                }
                 
                 if (maximizingPlayer) {
                     let maxEval = -Infinity;
@@ -630,20 +664,29 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function makeAIMove() {
             try {
-                if (gameState !== 'playing' || currentPlayer !== 'black') return;
+                if (gameState !== 'playing' || currentPlayer !== 'black') {
+                    console.log('IA não pode jogar. Estado:', gameState, 'Jogador atual:', currentPlayer);
+                    return;
+                }
                 
+                console.log('IA calculando movimento...');
                 const moves = getAllPossibleMoves('black');
-                if (moves.length === 0) return;
+                if (moves.length === 0) {
+                    console.log('Nenhum movimento disponível para a IA');
+                    return;
+                }
                 
                 let move;
                 if (difficulty === 'easy') {
                     move = moves[Math.floor(Math.random() * moves.length)];
+                    console.log('IA (Fácil) escolheu movimento aleatório:', move);
                 } else {
-                    let depth = difficulty === 'medium' ? 6 : 10; // Médio: profundidade 6, Impossível: profundidade 10
+                    let depth = difficulty === 'medium' ? 6 : 10;
                     let bestMove = null;
                     let bestValue = -Infinity;
                     
                     const sortedMoves = sortMoves(moves, 'black');
+                    console.log('Movimentos ordenados para IA:', sortedMoves);
                     for (const m of sortedMoves) {
                         const [fromRow, fromCol] = m.from;
                         const [toRow, toCol] = m.to;
@@ -655,6 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (piece === 'p' && toRow === 7) chessBoard[toRow][toCol] = 'q';
                         
                         const moveValue = minimax(depth - 1, -Infinity, Infinity, false);
+                        console.log(`Avaliação do movimento de [${fromRow}, ${fromCol}] para [${toRow}, ${toCol}]: ${moveValue}`);
                         chessBoard[fromRow][fromCol] = piece;
                         chessBoard[toRow][toCol] = captured;
                         
@@ -665,11 +709,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     
                     move = bestMove;
+                    console.log('IA escolheu movimento:', move, 'com valor:', bestValue);
                 }
                 
                 if (move) {
                     movePiece(move.from[0], move.from[1], move.to[0], move.to[1]);
                     switchPlayer();
+                } else {
+                    console.log('IA não encontrou movimento válido');
                 }
             } catch (error) {
                 console.error('Erro em makeAIMove:', error);
