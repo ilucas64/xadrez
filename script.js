@@ -288,11 +288,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const piece = chessBoard[r][c];
                     if (piece && ((attacker === 'white' && piece === piece.toUpperCase()) || 
                                  (attacker === 'black' && piece === piece.toLowerCase()))) {
-                        // Simula um movimento do atacante para ver se ele pode capturar a posição (row, col)
                         const temp = chessBoard[row][col];
-                        chessBoard[row][col] = ''; // Temporariamente remove a peça para verificar o ataque
+                        chessBoard[row][col] = '';
                         const canAttack = isValidMove(r, c, row, col);
-                        chessBoard[row][col] = temp; // Restaura a peça
+                        chessBoard[row][col] = temp;
                         if (canAttack) return true;
                     }
                 }
@@ -333,25 +332,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const piece = chessBoard[fromRow][fromCol];
                 const captured = chessBoard[toRow][toCol];
                 
-                // Simula o movimento
                 chessBoard[toRow][toCol] = piece;
                 chessBoard[fromRow][fromCol] = '';
                 
                 const kingPos = findKing(player);
                 const stillInCheck = kingPos ? isSquareAttacked(kingPos[0], kingPos[1], player === 'white' ? 'black' : 'white') : false;
                 
-                // Desfaz o movimento
                 chessBoard[fromRow][fromCol] = piece;
                 chessBoard[toRow][toCol] = captured;
                 
-                if (!stillInCheck) return true; // Encontrou um movimento que evita o xeque
+                if (!stillInCheck) return true;
             }
             return false;
         }
         
         function checkGameState() {
             try {
-                // Verifica se os reis ainda estão no tabuleiro
                 let whiteKing = false;
                 let blackKing = false;
                 for (let row = 0; row < 8; row++) {
@@ -374,7 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 
-                // Verifica xeque-mate para o jogador atual
                 const playerInTurn = currentPlayer;
                 const kingPos = findKing(playerInTurn);
                 if (kingPos) {
@@ -426,15 +421,57 @@ document.addEventListener('DOMContentLoaded', () => {
         function evaluateBoard() {
             try {
                 let score = 0;
+                
+                // Avaliação material
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
                         const piece = chessBoard[row][col];
                         if (piece) {
                             const value = pieceValues[piece];
                             score += piece === piece.toUpperCase() ? value : -value;
+                            
+                            // Bônus por controle do centro (e4, d4, e5, d5)
+                            const centerPositions = [
+                                [3, 3], [3, 4], // d4, e4
+                                [4, 3], [4, 4]  // d5, e5
+                            ];
+                            if (centerPositions.some(pos => pos[0] === row && pos[1] === col)) {
+                                score += piece === piece.toUpperCase() ? 0.5 : -0.5; // Bônus de 0.5 por peça no centro
+                            }
                         }
                     }
                 }
+                
+                // Bônus por mobilidade
+                const whiteMoves = getAllPossibleMoves('white').length;
+                const blackMoves = getAllPossibleMoves('black').length;
+                score += whiteMoves * 0.1; // Bônus de 0.1 por movimento possível para brancas
+                score -= blackMoves * 0.1; // Penalidade de 0.1 por movimento possível para pretas
+                
+                // Penalidade por rei exposto
+                const whiteKing = findKing('white');
+                const blackKing = findKing('black');
+                if (whiteKing) {
+                    const [wRow, wCol] = whiteKing;
+                    if (isSquareAttacked(wRow, wCol, 'black')) {
+                        score -= 2; // Penalidade se o rei branco está em xeque
+                    }
+                    // Penalidade por rei no centro no início do jogo
+                    if (wRow >= 3 && wRow <= 4 && wCol >= 3 && wCol <= 4) {
+                        score -= 1;
+                    }
+                }
+                if (blackKing) {
+                    const [bRow, bCol] = blackKing;
+                    if (isSquareAttacked(bRow, bCol, 'white')) {
+                        score += 2; // Penalidade se o rei preto está em xeque
+                    }
+                    // Penalidade por rei no centro no início do jogo
+                    if (bRow >= 3 && bRow <= 4 && bCol >= 3 && bCol <= 4) {
+                        score += 1;
+                    }
+                }
+                
                 return score;
             } catch (error) {
                 console.error('Erro em evaluateBoard:', error);
@@ -511,7 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (difficulty === 'easy') {
                     move = moves[Math.floor(Math.random() * moves.length)];
                 } else {
-                    let depth = difficulty === 'medium' ? 2 : 4;
+                    let depth = difficulty === 'medium' ? 4 : 8; // Médio: profundidade 4, Impossível: profundidade 8
                     let bestMove = null;
                     let bestValue = -Infinity;
                     
