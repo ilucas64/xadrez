@@ -1,35 +1,16 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xadrez no Navegador</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="chess-container">
-        <h1>Xadrez JavaScript</h1>
-        <div class="mode-selector">
-            <label for="game-mode">Modo de Jogo:</label>
-            <select id="game-mode">
-                <option value="pvp">Jogador vs Jogador (Local)</option>
-                <option value="pve">Jogador vs IA</option>
-            </select>
-            <label for="difficulty" id="difficulty-label" style="display: none;">Dificuldade:</label>
-            <select id="difficulty" style="display: none;">
-                <option value="easy">Fácil</option>
-                <option value="medium">Médio</option>
-                <option value="impossible">Impossível</option>
-            </select>
-        </div>
-        <div id="notification" class="notification"></div>
-        <div id="board" class="chess-board"></div>
-        <div class="info-panel">
-            <div id="turn-indicator">Vez das: <span>Brancas</span></div>
-            <div id="status">Jogo em andamento</div>
-            <button id="reset-btn">Reiniciar Jogo</button>
-        </div>
+<!-- Adicionar dentro de <div class="chess-container">, antes do fechamento </div> -->
+<div class="move-history" id="move-history">
+    <h3>Histórico de Movimentos</h3>
+    <div id="history-list"></div>
+</div>
+
+<!-- Adicionar no final do body, antes do </html> -->
+<div id="promotion-dialog" class="promotion-dialog" style="display: none;">
+    <h3>Promover peão</h3>
+    <div class="promotion-options">
+        <div data-piece="q">♛</div>
+        <div data-piece="r">♜</div>
+        <div data-piece="b">♝</div>
+        <div data-piece="n">♞</div>
     </div>
-    <script src="script.js"></script>
-</body>
-</html>
+</div>

@@ -1,120 +1,75 @@
-body {
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-    background-color: #f0f0f0;
+/* Adicionar no final do arquivo */
+
+/* Melhorias na responsividade */
+@media (max-width: 600px) {
+    .chess-board {
+        grid-template-columns: repeat(8, 40px);
+        grid-template-rows: repeat(8, 40px);
+        width: 320px;
+        height: 320px;
+    }
+    
+    .square {
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+    }
+    
+    .mode-selector {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .mode-selector select {
+        margin: 5px 0;
+    }
 }
 
-.chess-container {
-    text-align: center;
+/* Efeito de hover nas peças */
+.square:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+    transition: transform 0.1s ease;
 }
 
-.chess-board {
-    display: grid;
-    grid-template-columns: repeat(8, 60px);
-    grid-template-rows: repeat(8, 60px);
-    border: 2px solid #333;
-    width: 480px;
-    height: 480px;
-    background-color: #fff;
-    visibility: visible !important;
+/* Efeito de movimento */
+.piece-move {
+    animation: moveAnimation 0.3s ease;
 }
 
-.square {
-    width: 60px;
-    height: 60px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 36px;
-    cursor: pointer;
-    visibility: visible !important;
+@keyframes moveAnimation {
+    from { opacity: 0.5; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
 }
 
-.light {
-    background-color: #f0d9b5;
+/* Destaque para xeque */
+.check {
+    background-color: #ff6b6b !important;
+    animation: pulse 1s infinite;
 }
 
-.dark {
-    background-color: #b58863;
+@keyframes pulse {
+    0% { background-color: #ff6b6b; }
+    50% { background-color: #ff8e8e; }
+    100% { background-color: #ff6b6b; }
 }
 
-.white {
-    color: #fff;
-    text-shadow: 0 0 2px #000;
-}
-
-.black {
-    color: #000;
-}
-
-.selected {
-    background-color: #ffeb3b !important;
-}
-
-.highlight {
-    background-color: #4caf50 !important;
-}
-
-.info-panel {
+/* Painel de histórico de movimentos */
+.move-history {
     margin-top: 20px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    background-color: #fff;
 }
 
-#turn-indicator {
-    font-size: 18px;
-    margin-bottom: 10px;
+.move-history div {
+    padding: 5px;
+    border-bottom: 1px solid #eee;
 }
 
-#status {
-    font-size: 16px;
-    margin-bottom: 10px;
-}
-
-#reset-btn {
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    background-color: #2196f3;
-    color: white;
-    border: none;
-    border-radius: 5px;
-}
-
-#reset-btn:hover {
-    background-color: #1976d2;
-}
-
-.mode-selector {
-    margin-bottom: 20px;
-}
-
-.mode-selector label {
-    margin-right: 10px;
-}
-
-.notification {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 10px 20px;
-    color: white;
-    border-radius: 5px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.notification.show {
-    opacity: 1;
-}
-
-.notification.success {
-    background-color: #4caf50;
-}
-
-.notification.error {
-    background-color: #f44336;
+.move-history div:nth-child(odd) {
+    background-color: #f9f9f9;
 }
