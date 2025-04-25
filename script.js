@@ -54,7 +54,15 @@ document.addEventListener('DOMContentLoaded', () => {
         function initializeBoard() {
             try {
                 console.log('Inicializando tabuleiro...');
-                board.innerHTML = '';
+                if (!board) {
+                    console.error('Elemento #board não encontrado durante inicialização');
+                    showNotification('Erro: Tabuleiro não encontrado.', 'error');
+                    return;
+                }
+                
+                board.innerHTML = ''; // Limpa o tabuleiro
+                console.log('Tabuleiro limpo. Criando quadrados...');
+                
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
                         const square = document.createElement('div');
@@ -73,14 +81,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             square.classList.remove('black', 'white');
                         }
                         
-                        // Remove event listeners antigos para evitar duplicação
-                        square.replaceWith(square.cloneNode(true));
-                        const newSquare = board.children[board.children.length - 1];
-                        newSquare.addEventListener('click', () => handleSquareClick(row, col));
-                        board.appendChild(newSquare);
+                        // Remove event listeners antigos e adiciona novos
+                        square.addEventListener('click', () => handleSquareClick(row, col));
+                        board.appendChild(square);
                     }
                 }
-                console.log('Tabuleiro inicializado:', chessBoard);
+                
+                console.log('Tabuleiro inicializado com sucesso. Estado do tabuleiro:', chessBoard);
+                console.log('Número de quadrados criados:', board.children.length);
                 updateGameInfo();
             } catch (error) {
                 console.error('Erro ao inicializar o tabuleiro:', error);
@@ -346,8 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                      (player === 'black' && piece === piece.toLowerCase()))) {
                             for (let r = 0; r < 8; r++) {
                                 for (let c = 0; c < 8; c++) {
-
-
                                     if (isValidMove(row, col, r, c)) {
                                         moves.push({ from: [row, col], to: [r, c] });
                                     }
@@ -436,6 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function resetGame() {
             try {
+                console.log('Reiniciando o jogo...');
                 chessBoard = [
                     ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
                     ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
