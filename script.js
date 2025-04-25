@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const joinRoomBtn = document.getElementById('join-room-btn');
         const createRoomBtn = document.getElementById('create-room-btn');
         const roomStatus = document.getElementById('room-status');
+        const notification = document.getElementById('notification');
         
         if (!board) {
             console.error('Elemento #board não encontrado');
@@ -48,6 +49,14 @@ document.addEventListener('DOMContentLoaded', () => {
             'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 100,
             'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 100
         };
+        
+        function showNotification(message) {
+            notification.textContent = message;
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
         
         function initializeBoard() {
             try {
@@ -245,6 +254,9 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
                 updateGameInfo();
+                if (gameMode === 'online' && socket) {
+                    socket.emit('updateTurn', { roomId, currentPlayer });
+                }
             } catch (error) {
                 console.error('Erro em switchPlayer:', error);
             }
@@ -273,9 +285,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!whiteKing) {
                     gameState = 'checkmate';
                     statusDisplay.textContent = 'Xeque-mate! Pretas vencem!';
+                    if (gameMode === 'online' && socket) {
+                        socket.emit('gameOver', { roomId, winner: 'black' });
+                    }
                 } else if (!blackKing) {
                     gameState = 'checkmate';
                     statusDisplay.textContent = 'Xeque-mate! Brancas vencem!';
+                    if (gameMode === 'online' && socket) {
+                        socket.emit('gameOver', { roomId, winner: 'white' });
+                    }
                 }
             } catch (error) {
                 console.error('Erro em checkGameState:', error);
@@ -472,19 +490,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function setupSocket() {
             try {
-                // Substitua pelo URL do seu servidor hospedado
-                const serverUrl = 'http://localhost:3000'; // Ex.: 'https://your-app.onrender.com'
+                const serverUrl = 'http://localhost:3000'; // Substitua pelo URL do servidor hospedado
                 if (typeof io !== 'undefined') {
-                    socket = io(serverUrl);
+                    socket = io(serverUrl, { reconnection: false });
                     
                     socket.on('connect', () => {
                         console.log('Conectado ao servidor');
+                        roomStatus.textContent = 'Conectado ao servidor. Crie ou entre em uma sala.';
                     });
                     
                     socket.on('roomCreated', ({ roomId: newRoomId }) => {
                         roomId = newRoomId;
                         playerColor = 'white';
                         roomStatus.textContent = `Sala criada: ${roomId}. Aguardando o segundo jogador...`;
+                        showNotification(`Sala criada: ${roomId}`);
                         initializeBoard();
                     });
                     
@@ -492,11 +511,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         roomId = joinedRoomId;
                         playerColor = color;
                         roomStatus.textContent = `Conectado à sala ${roomId} como ${playerColor === 'white' ? 'Brancas' : 'Pretas'}.`;
+                        showNotification(`Você entrou na sala ${roomId} como ${playerColor === 'white' ? 'Brancas' : 'Pretas'}.`);
+                        initializeBoard();
+                    });
+                    
+                    socket.on('playerJoined', () => {
+                        showNotification('Segundo jogador entrou. Jogo iniciado!');
+                        roomStatus.textContent = 'Jogo iniciado!';
                         initializeBoard();
                     });
                     
                     socket.on('roomFull', () => {
                         roomStatus.textContent = 'Erro: Sala cheia ou inexistente.';
+                        showNotification('Erro: Sala cheia ou inexistente.');
                     });
                     
                     socket.on('move', ({ move }) => {
@@ -504,15 +531,35 @@ document.addEventListener('DOMContentLoaded', () => {
                         switchPlayer();
                     });
                     
+                    socket.on('updateTurn', ({ currentPlayer: newTurn }) => {
+                        currentPlayer = newTurn;
+                        updateGameInfo();
+                    });
+                    
                     socket.on('reset', () => {
                         resetGame();
+                        showNotification('Jogo reiniciado.');
+                    });
+                    
+                    socket.on('gameOver', ({ winner }) => {
+                        gameState = 'checkmate';
+                        statusDisplay.textContent = `Xeque-mate! ${winner === 'white' ? 'Brancas' : 'Pretas'} vencem!`;
+                        showNotification(`Xeque-mate! ${winner === 'white' ? 'Brancas' : 'Pretas'} vencem!`);
+                    });
+                    
+                    socket.on('connect_error', (error) => {
+                        console.error('Erro de conexão com o servidor:', error);
+                        roomStatus.textContent = 'Erro: Não foi possível conectar ao servidor.';
+                        showNotification('Erro: Não foi possível conectar ao servidor.');
                     });
                 } else {
                     console.warn('Socket.IO não carregado. Modo online indisponível.');
                     roomStatus.textContent = 'Modo online indisponível. Configure o servidor.';
+                    showNotification('Modo online indisponível.');
                 }
             } catch (error) {
                 console.error('Erro em setupSocket:', error);
+                showNotification('Erro ao configurar o modo online.');
             }
         }
         
@@ -534,6 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetGame();
             } catch (error) {
                 console.error('Erro ao mudar modo de jogo:', error);
+                showNotification('Erro ao mudar modo de jogo.');
             }
         });
         
@@ -543,6 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetGame();
             } catch (error) {
                 console.error('Erro ao mudar dificuldade:', error);
+                showNotification('Erro ao mudar dificuldade.');
             }
         });
         
@@ -552,9 +601,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     socket.emit('createRoom');
                 } else {
                     roomStatus.textContent = 'Erro: Servidor não conectado.';
+                    showNotification('Erro: Servidor não conectado.');
                 }
             } catch (error) {
                 console.error('Erro ao criar sala:', error);
+                showNotification('Erro ao criar sala.');
             }
         });
         
@@ -565,9 +616,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     socket.emit('joinRoom', { roomId: id });
                 } else {
                     roomStatus.textContent = 'Erro: Insira um ID válido ou conecte ao servidor.';
+                    showNotification('Erro: Insira um ID válido ou conecte ao servidor.');
                 }
             } catch (error) {
                 console.error('Erro ao entrar na sala:', error);
+                showNotification('Erro ao entrar na sala.');
             }
         });
         
@@ -575,5 +628,11 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeBoard();
     } catch (error) {
         console.error('Erro na inicialização do jogo:', error);
+        const notification = document.getElementById('notification');
+        if (notification) {
+            notification.textContent = 'Erro ao iniciar o jogo. Verifique o console.';
+            notification.classList.add('show');
+            setTimeout(() => notification.classList.remove('show'), 3000);
+        }
     }
 });

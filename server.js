@@ -6,7 +6,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: '*', // Permite conexões de qualquer origem (ajuste para produção)
+        origin: '*',
         methods: ['GET', 'POST']
     }
 });
@@ -30,7 +30,7 @@ io.on('connection', (socket) => {
             rooms[roomId].colors[socket.id] = 'black';
             socket.join(roomId);
             socket.emit('roomJoined', { roomId, color: 'black' });
-            io.to(roomId).emit('roomStatus', { message: 'Jogo iniciado!' });
+            io.to(roomId).emit('playerJoined');
             console.log(`Usuário ${socket.id} entrou na sala ${roomId}`);
         } else {
             socket.emit('roomFull');
@@ -41,8 +41,16 @@ io.on('connection', (socket) => {
         socket.to(roomId).emit('move', { move });
     });
 
+    socket.on('updateTurn', ({ roomId, currentPlayer }) => {
+        socket.to(roomId).emit('updateTurn', { currentPlayer });
+    });
+
     socket.on('reset', ({ roomId }) => {
         socket.to(roomId).emit('reset');
+    });
+
+    socket.on('gameOver', ({ roomId, winner }) => {
+        io.to(roomId).emit('gameOver', { winner });
     });
 
     socket.on('disconnect', () => {
@@ -55,7 +63,7 @@ io.on('connection', (socket) => {
                 if (room.players.length === 0) {
                     delete rooms[roomId];
                 } else {
-                    io.to(roomId).emit('roomStatus', { message: 'O outro jogador desconectou.' });
+                    io.to(roomId).emit('playerJoined', { message: 'O outro jogador desconectou.' });
                 }
                 console.log(`Usuário ${socket.id} desconectado da sala ${roomId}`);
             }
