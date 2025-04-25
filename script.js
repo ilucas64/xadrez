@@ -5,36 +5,39 @@ const pusher = new Pusher('1126204250sp', {
 
 let channel;
 let roomId = '';
-let isMyTurn = true;
-let currentPlayer = 'white';
-
-const board = document.getElementById('board');
-const turnIndicator = document.getElementById('turn-indicator').querySelector('span');
-const statusDisplay = document.getElementById('status');
-const resetButton = document.getElementById('reset-btn');
-const notification = document.getElementById('notification');
-const connectBtn = document.getElementById('connect-btn');
-
+let playerColor = '';
+let currentTurn = 'white';
+let chessBoard = [];
 let selectedPiece = null;
-
-let chessBoard = [
-  ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
-  ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
-  ['', '', '', '', '', '', '', ''],
-  ['', '', '', '', '', '', '', ''],
-  ['', '', '', '', '', '', '', ''],
-  ['', '', '', '', '', '', '', ''],
-  ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-  ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
-];
 
 const pieceSymbols = {
   'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚',
   'P': '♙', 'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔'
 };
 
-function showNotification(message, type = 'success') {
-  notification.textContent = message;
+const board = document.getElementById('board');
+const turnIndicator = document.getElementById('turn-indicator').querySelector('span');
+const statusDisplay = document.getElementById('status');
+const notification = document.getElementById('notification');
+const resetButton = document.getElementById('reset-btn');
+const createBtn = document.getElementById('create-room');
+const joinBtn = document.getElementById('join-room');
+
+function defaultBoard() {
+  return [
+    ['r','n','b','q','k','b','n','r'],
+    ['p','p','p','p','p','p','p','p'],
+    ['','','','','','','',''],
+    ['','','','','','','',''],
+    ['','','','','','','',''],
+    ['','','','','','','',''],
+    ['P','P','P','P','P','P','P','P'],
+    ['R','N','B','Q','K','B','N','R']
+  ];
+}
+
+function showNotification(msg, type = 'success') {
+  notification.textContent = msg;
   notification.className = `notification ${type} show`;
   setTimeout(() => {
     notification.className = 'notification';
@@ -53,7 +56,6 @@ function initializeBoard() {
       const piece = chessBoard[row][col];
       if (piece) {
         square.textContent = pieceSymbols[piece];
-        square.dataset.piece = piece;
         square.classList.add(piece === piece.toLowerCase() ? 'black' : 'white');
       }
 
@@ -61,95 +63,102 @@ function initializeBoard() {
       board.appendChild(square);
     }
   }
-  turnIndicator.textContent = currentPlayer === 'white' ? 'Brancas' : 'Pretas';
-  turnIndicator.style.color = currentPlayer === 'white' ? '#333' : '#000';
+  updateTurnInfo();
+}
+
+function updateTurnInfo() {
+  turnIndicator.textContent = currentTurn === 'white' ? 'Brancas' : 'Pretas';
+  turnIndicator.style.color = currentTurn === 'white' ? '#333' : '#000';
 }
 
 function handleSquareClick(row, col) {
-  if (!isMyTurn) return;
+  if (playerColor !== currentTurn) return;
 
   const piece = chessBoard[row][col];
 
   if (selectedPiece) {
     const [fromRow, fromCol] = selectedPiece;
-    if ((fromRow === row && fromCol === col)) {
-      selectedPiece = null;
-      initializeBoard();
-      return;
-    }
 
     chessBoard[row][col] = chessBoard[fromRow][fromCol];
     chessBoard[fromRow][fromCol] = '';
     selectedPiece = null;
 
-    channel.trigger('client-move', {
-      board: chessBoard,
-      currentPlayer: currentPlayer === 'white' ? 'black' : 'white'
-    });
-
-    switchTurn();
+    currentTurn = currentTurn === 'white' ? 'black' : 'white';
+    channel.trigger('client-move', { board: chessBoard, turn: currentTurn });
     initializeBoard();
-  } else if (piece && isCorrectTurn(piece)) {
+  } else if (piece && isPlayerPiece(piece)) {
     selectedPiece = [row, col];
     document.querySelector(`.square[data-row="${row}"][data-col="${col}"]`).classList.add('selected');
   }
 }
 
-function isCorrectTurn(piece) {
-  return (currentPlayer === 'white' && piece === piece.toUpperCase()) ||
-         (currentPlayer === 'black' && piece === piece.toLowerCase());
+function isPlayerPiece(piece) {
+  return (playerColor === 'white' && piece === piece.toUpperCase()) ||
+         (playerColor === 'black' && piece === piece.toLowerCase());
 }
 
-function switchTurn() {
-  currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
-  isMyTurn = !isMyTurn;
-}
-
-function resetGame() {
-  chessBoard = [
-    ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
-    ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
-    ['', '', '', '', '', '', '', ''],
-    ['', '', '', '', '', '', '', ''],
-    ['', '', '', '', '', '', '', ''],
-    ['', '', '', '', '', '', '', ''],
-    ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-    ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
-  ];
-  currentPlayer = 'white';
-  isMyTurn = true;
-  initializeBoard();
-}
-
-resetButton.addEventListener('click', () => {
-  resetGame();
-  channel.trigger('client-reset', {});
-});
-
-connectBtn.addEventListener('click', () => {
-  const input = document.getElementById('room-id');
-  roomId = input.value.trim();
-  if (!roomId) {
-    alert("Informe um código de sala");
-    return;
-  }
-
-  channel = pusher.subscribe(`presence-${roomId}`);
-
-  channel.bind('pusher:subscription_succeeded', (members) => {
-    showNotification("Conectado com sucesso!", "success");
-    statusDisplay.textContent = "Conectado à sala";
-    initializeBoard();
-  });
-
-  channel.bind('client-move', (data) => {
+function setupChannelEvents() {
+  channel.bind('client-move', data => {
     chessBoard = data.board;
-    currentPlayer = data.currentPlayer;
-    isMyTurn = !isMyTurn;
+    currentTurn = data.turn;
     initializeBoard();
   });
 
   channel.bind('client-reset', () => {
-    resetGame();
+    chessBoard = defaultBoard();
+    currentTurn = 'white';
+    initializeBoard();
   });
+}
+
+function createRoom() {
+  roomId = document.getElementById('room-id').value.trim();
+  if (!roomId) return alert("Informe um nome para a sala");
+
+  playerColor = 'white';
+  chessBoard = defaultBoard();
+  currentTurn = 'white';
+
+  channel = pusher.subscribe(`private-${roomId}`);
+  setupChannelEvents();
+
+  channel.bind('pusher:subscription_succeeded', () => {
+    showNotification("Sala criada! Esperando outro jogador...");
+    statusDisplay.textContent = "Você é BRANCO (inicia o jogo)";
+    initializeBoard();
+  });
+}
+
+function joinRoom() {
+  roomId = document.getElementById('room-id').value.trim();
+  if (!roomId) return alert("Informe o código da sala");
+
+  playerColor = 'black';
+  currentTurn = 'white';
+
+  channel = pusher.subscribe(`private-${roomId}`);
+  setupChannelEvents();
+
+  channel.bind('pusher:subscription_succeeded', () => {
+    showNotification("Conectado à sala!");
+    statusDisplay.textContent = "Você é PRETO (aguarde sua vez)";
+    // Solicitando tabuleiro do criador da sala
+    channel.trigger('client-request-board', {});
+  });
+
+  channel.bind('client-request-board', () => {
+    if (playerColor === 'white') {
+      channel.trigger('client-move', { board: chessBoard, turn: currentTurn });
+    }
+  });
+}
+
+resetButton.addEventListener('click', () => {
+  chessBoard = defaultBoard();
+  currentTurn = 'white';
+  initializeBoard();
+  channel.trigger('client-reset', {});
 });
+
+createBtn.addEventListener('click', createRoom);
+joinBtn.addEventListener('click', joinRoom);
