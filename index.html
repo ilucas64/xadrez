@@ -51,8 +51,9 @@
         <div class="mode-selector">
             <label for="game-mode">Modo de Jogo:</label>
             <select id="game-mode">
-                <option value="pvp">Jogador vs Jogador</option>
+                <option value="pvp">Jogador vs Jogador (Local)</option>
                 <option value="pve">Jogador vs IA</option>
+                <option value="online">Jogador vs Jogador (Online)</option>
             </select>
             <label for="difficulty" id="difficulty-label" style="display: none;">Dificuldade:</label>
             <select id="difficulty" style="display: none;">
@@ -61,6 +62,13 @@
                 <option value="hard">Difícil</option>
             </select>
         </div>
+        <div class="room-selector" id="room-selector" style="display: none;">
+            <label for="room-id">ID da Sala:</label>
+            <input type="text" id="room-id" placeholder="Digite o ID da sala">
+            <button id="join-room-btn">Entrar na Sala</button>
+            <button id="create-room-btn">Criar Nova Sala</button>
+            <div id="room-status"></div>
+        </div>
         <div id="board" class="chess-board"></div>
         <div class="info-panel">
             <div id="turn-indicator">Vez das: <span>Brancas</span></div>
@@ -68,6 +76,7 @@
             <button id="reset-btn">Reiniciar Jogo</button>
         </div>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

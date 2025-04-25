@@ -6,12 +6,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameModeSelect = document.getElementById('game-mode');
     const difficultySelect = document.getElementById('difficulty');
     const difficultyLabel = document.getElementById('difficulty-label');
+    const roomSelector = document.getElementById('room-selector');
+    const roomIdInput = document.getElementById('room-id');
+    const joinRoomBtn = document.getElementById('join-room-btn');
+    const createRoomBtn = document.getElementById('create-room-btn');
+    const roomStatus = document.getElementById('room-status');
     
     let selectedPiece = null;
     let currentPlayer = 'white';
     let gameState = 'playing';
     let gameMode = 'pvp';
     let difficulty = 'medium';
+    let socket = null;
+    let roomId = null;
+    let playerColor = null;
     
     let chessBoard = [
         ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
@@ -39,7 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 const square = document.createElement('div');
-                square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                square.className = `square ${(row + col) % 2 `
+
+=== 0 ? 'light' : 'dark'}`;
                 square.dataset.row = row;
                 square.dataset.col = col;
                 
@@ -67,10 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const [fromRow, fromCol] = selectedPiece;
             if (isValidMove(fromRow, fromCol, row, col)) {
                 movePiece(fromRow, fromCol, row, col);
+                if (gameMode === 'online' && socket) {
+                    socket.emit('move', { roomId, move: { from: [fromRow, fromCol], to: [row, col] } });
+                }
                 selectedPiece = null;
                 removeHighlightsAndSelection();
                 switchPlayer();
-                console.log('Movimento realizado, jogador atual:', currentPlayer);
                 if (gameMode === 'pve' && gameState === 'playing' && currentPlayer === 'black') {
                     console.log('Acionando IA...');
                     setTimeout(makeAIMove, 500);
@@ -84,10 +96,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 highlightSquare(row, col);
                 showPossibleMoves(row, col);
             }
-        } else if (piece && currentPlayer === 'white' && piece === piece.toUpperCase()) {
-            selectedPiece = [row, col];
-            highlightSquare(row, col);
-            showPossibleMoves(row, col);
+        } else if (piece) {
+            const isWhitePiece = piece === piece.toUpperCase();
+            const canSelect = (gameMode === 'pvp' && 
+                              ((currentPlayer === 'white' && isWhitePiece) || 
+                               (currentPlayer === 'black' && !isWhitePiece))) ||
+                             (gameMode === 'pve' && currentPlayer === 'white' && isWhitePiece) ||
+                             (gameMode === 'online' && playerColor === currentPlayer && 
+                              ((playerColor === 'white' && isWhitePiece) || 
+                               (playerColor === 'black' && !isWhitePiece)));
+            if (canSelect) {
+                selectedPiece = [row, col];
+                highlightSquare(row, col);
+                showPossibleMoves(row, col);
+            }
         }
     }
     
@@ -222,7 +244,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPlayer = 'white';
         gameState = 'playing';
         statusDisplay.textContent = 'Jogo em andamento';
+        playerColor = null;
         initializeBoard();
+        if (gameMode === 'online' && socket && roomId) {
+            socket.emit('reset', { roomId });
+        }
     }
     
     function getAllPossibleMoves(player) {
@@ -329,9 +355,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let move;
         if (difficulty === 'easy') {
             move = moves[Math.floor(Math.random() * moves.length)];
-            console.log('IA (Fácil) escolheu movimento aleatório:', move);
+            console.log('IA-xxxx(Fácil) escolheu movimento aleatório:', move);
         } else {
-            let depth = difficulty === 'medium' ? 2 : 4; // Reduzi profundidade para testes
+            let depth = difficulty === 'medium' ? 2 : 4;
             let bestMove = null;
             let bestValue = -Infinity;
             
@@ -368,16 +394,75 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    function setupSocket() {
+        // Substitua pelo URL do seu servidor hospedado
+        socket = io('http://localhost:3000'); // Ex.: 'https://your-app.onrender.com'
+        
+        socket.on('connect', () => {
+            console.log('Conectado ao servidor');
+        });
+        
+        socket.on('roomCreated', ({ roomId: newRoomId }) => {
+            roomId = newRoomId;
+            playerColor = 'white';
+            roomStatus.textContent = `Sala criada: ${roomId}. Aguardando o segundo jogador...`;
+            initializeBoard();
+        });
+        
+        socket.on('roomJoined', ({ roomId: joinedRoomId, color }) => {
+            roomId = joinedRoomId;
+            playerColor = color;
+            roomStatus.textContent = `Conectado à sala ${roomId} como ${playerColor === 'white' ? 'Brancas' : 'Pretas'}.`;
+            initializeBoard();
+        });
+        
+        socket.on('roomFull', () => {
+            roomStatus.textContent = 'Erro: Sala cheia ou inexistente.';
+        });
+        
+        socket.on('move', ({ move }) => {
+            movePiece(move.from[0], move.from[1], move.to[0], move.to[1]);
+            switchPlayer();
+        });
+        
+        socket.on('reset', () => {
+            resetGame();
+        });
+    }
+    
     gameModeSelect.addEventListener('change', () => {
         gameMode = gameModeSelect.value;
         difficultyLabel.style.display = gameMode === 'pve' ? 'inline' : 'none';
         difficultySelect.style.display = gameMode === 'pve' ? 'inline' : 'none';
+        roomSelector.style.display = gameMode === 'online' ? 'block' : 'none';
+        if (gameMode === 'online') {
+            setupSocket();
+        } else if (socket) {
+            socket.disconnect();
+            socket = null;
+            roomId = null;
+            playerColor = null;
+            roomStatus.textContent = '';
+        }
         resetGame();
     });
     
     difficultySelect.addEventListener('change', () => {
         difficulty = difficultySelect.value;
         resetGame();
+    });
+    
+    createRoomBtn.addEventListener('click', () => {
+        if (socket) {
+            socket.emit('createRoom');
+        }
+    });
+    
+    joinRoomBtn.addEventListener('click', () => {
+        const id = roomIdInput.value.trim();
+        if (id && socket) {
+            socket.emit('joinRoom', { roomId: id });
+        }
     });
     
     resetButton.addEventListener('click', resetGame);
