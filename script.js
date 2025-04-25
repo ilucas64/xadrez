@@ -330,6 +330,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     socket.emit('reset', { roomId });
                     showNotification('Jogo reiniciado.', 'success');
                 }
+
+
             } catch (error) {
                 console.error('Erro em resetGame:', error);
                 showNotification('Erro ao reiniciar o jogo.', 'error');
@@ -487,8 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function setupSocket() {
             try {
-                // Substitua pelo URL do seu servidor no Render
-                const serverUrl = 'http://localhost:3000'; // Ex.: 'https://chess-server.onrender.com'
+                const serverUrl = 'https://chess-server.onrender.com'; // Substitua pelo URL do Render
                 if (typeof io !== 'undefined') {
                     socket = io(serverUrl, { 
                         reconnectionAttempts: 3,
@@ -496,7 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     
                     socket.on('connect', () => {
-                        console.log('Conectado ao servidor');
+                        console.log('Conectado ao servidor:', serverUrl);
                         roomStatus.textContent = 'Conectado ao servidor. Crie ou entre em uma sala.';
                         showNotification('Conectado ao servidor!', 'success');
                     });
@@ -550,12 +551,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     socket.on('connect_error', (error) => {
                         console.error('Erro de conexão com o servidor:', error);
-                        roomStatus.textContent = 'Erro: Não foi possível conectar ao servidor.';
-                        showNotification('Erro: Não foi possível conectar ao servidor.', 'error');
+                        roomStatus.textContent = `Erro: Não foi possível conectar ao servidor em ${serverUrl}.`;
+                        showNotification(`Erro: Não foi possível conectar ao servidor em ${serverUrl}.`, 'error');
                     });
                     
                     socket.on('disconnect', () => {
-                        console.log('Desconectado do servidor');
+                        console.log('Desconectado do servidor:', serverUrl);
                         roomStatus.textContent = 'Desconectado do servidor.';
                         showNotification('Desconectado do servidor.', 'error');
                     });
@@ -607,8 +608,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (socket && socket.connected) {
                     socket.emit('createRoom');
                 } else {
-                    roomStatus.textContent = 'Erro: Servidor não conectado.';
-                    showNotification('Erro: Servidor não conectado.', 'error');
+                    roomStatus.textContent = `Erro: Servidor não conectado em ${serverUrl}.`;
+                    showNotification(`Erro: Servidor não conectado em ${serverUrl}.`, 'error');
                 }
             } catch (error) {
                 console.error('Erro ao criar sala:', error);
@@ -622,8 +623,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (id && socket && socket.connected) {
                     socket.emit('joinRoom', { roomId: id });
                 } else {
-                    roomStatus.textContent = 'Erro: Insira um ID válido ou conecte ao servidor.';
-                    showNotification('Erro: Insira um ID válido ou conecte ao servidor.', 'error');
+                    roomStatus.textContent = `Erro: Insira um ID válido ou conecte ao servidor em ${serverUrl}.`;
+                    showNotification(`Erro: Insira um ID válido ou conecte ao servidor em ${serverUrl}.`, 'error');
                 }
             } catch (error) {
                 console.error('Erro ao entrar na sala:', error);
