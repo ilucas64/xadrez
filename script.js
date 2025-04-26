@@ -637,9 +637,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 let move;
                 if (difficulty === 'easy') {
-                    move = moves[Math.floor(Math.random() * moves.length)];
+                    // Modo Fácil: 80% chance de movimento aleatório, 20% chance de captura
+                    const captures = moves.filter(m => chessBoard[m.to[0]][m.to[1]] !== '');
+                    if (captures.length > 0 && Math.random() < 0.2) {
+                        move = captures[Math.floor(Math.random() * captures.length)];
+                    } else {
+                        move = moves[Math.floor(Math.random() * moves.length)];
+                    }
                 } else {
-                    let depth = difficulty === 'medium' ? 4 : 6; // Médio: profundidade 6, Impossível: profundidade 10
+                    let depth = difficulty === 'medium' ? 4 : 6;
                     let bestMove = null;
                     let bestValue = -Infinity;
                     
@@ -700,27 +706,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         resetButton.addEventListener('click', resetGame);
+        
+        document.getElementById('toggle-theme').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+        
+        document.getElementById('switch-sides').addEventListener('click', () => {
+            try {
+                if (gameMode === 'pve') {
+                    currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
+                    resetGame();
+                    if (currentPlayer === 'black') {
+                        setTimeout(makeAIMove, 500);
+                    }
+                } else {
+                    showNotification('Troca de lados só é permitida no modo Jogador vs IA.', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao trocar lados:', error);
+                showNotification('Erro ao trocar lados.', 'error');
+            }
+        });
+        
         initializeBoard();
     } catch (error) {
         console.error('Erro na inicialização do jogo:', error);
         showNotification('Erro ao iniciar o jogo. Verifique o console.', 'error');
-    }
-});
-
-// Alternar tema claro/escuro
-document.getElementById('toggle-theme').addEventListener('click', () => {
-    document.body.classList.toggle('dark-mode');
-});
-
-// Trocar lado do jogador e IA
-document.getElementById('switch-sides').addEventListener('click', () => {
-    if (gameMode === 'pve') {
-        currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
-        initializeBoard();
-        if (currentPlayer === 'black') {
-            setTimeout(makeAIMove, 300);
-        }
-    } else {
-        showNotification('Só funciona no modo Jogador vs IA', 'error');
     }
 });
