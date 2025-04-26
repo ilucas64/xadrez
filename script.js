@@ -43,6 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
             'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 100
         };
         
+        // Transposition Table para armazenar avaliações
+        const transpositionTable = new Map();
+        
         function showNotification(message, type = 'success') {
             notification.textContent = message;
             notification.className = `notification ${type} show`;
@@ -97,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         switchPlayer();
                         if (gameMode === 'pve' && gameState === 'playing' && currentPlayer === 'black') {
                             console.log('Acionando IA...');
-                            setTimeout(makeAIMove, 500);
+                            setTimeout(makeAIMove, 300); // Reduzido de 500ms para 300ms
                         }
                     } else if (fromRow === row && fromCol === col) {
                         selectedPiece = null;
@@ -409,6 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentPlayer = 'white';
                 gameState = 'playing';
                 statusDisplay.textContent = 'Jogo em andamento';
+                transpositionTable.clear(); // Limpar a tabela de transposição
                 initializeBoard();
                 showNotification('Jogo reiniciado.', 'success');
             } catch (error) {
@@ -417,11 +421,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        // Função para gerar uma chave única para a posição do tabuleiro
+        function getBoardKey() {
+            return chessBoard.map(row => row.join('')).join('|') + '|' + currentPlayer;
+        }
+        
         function evaluateBoard() {
             try {
+                const boardKey = getBoardKey();
+                if (transpositionTable.has(boardKey)) {
+                    return transpositionTable.get(boardKey);
+                }
+                
                 let score = 0;
                 
-                // Avaliação material
+                // Pré-calcular posições centrais
+                const centerPositions = new Set(['3,3', '3,4', '4,3', '4,4']);
+                
+                // Avaliação material e bônus posicionais
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
                         const piece = chessBoard[row][col];
@@ -429,25 +446,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             const value = pieceValues[piece];
                             score += piece === piece.toUpperCase() ? value : -value;
                             
-                            // Bônus por controle do centro (e4, d4, e5, d5)
-                            const centerPositions = [
-                                [3, 3], [3, 4], // d4, e4
-                                [4, 3], [4, 4]  // d5, e5
-                            ];
-                            if (centerPositions.some(pos => pos[0] === row && pos[1] === col)) {
+                            // Bônus por controle do centro
+                            if (centerPositions.has(`${row},${col}`)) {
                                 score += piece === piece.toUpperCase() ? 0.5 : -0.5;
                             }
                             
-                            // Bônus por desenvolvimento (cavalos e bispos fora da posição inicial)
+                            // Bônus por desenvolvimento
                             if (piece.toLowerCase() === 'n' || piece.toLowerCase() === 'b') {
-                                if (piece === piece.toLowerCase()) { // Peças pretas
-                                    if (row !== 0 || (col !== 1 && col !== 6)) {
-                                        score -= 0.3; // Bônus por cavalo ou bispo preto desenvolvido
-                                    }
-                                } else { // Peças brancas
-                                    if (row !== 7 || (col !== 1 && col !== 6)) {
-                                        score += 0.3; // Bônus por cavalo ou bispo branco desenvolvido
-                                    }
+                                if (piece === piece.toLowerCase() && (row !== 0 || (col !== 1 && col !== 6))) {
+                                    score -= 0.3;
+                                } else if (piece === piece.toUpperCase() && (row !== 7 || (col !== 1 && col !== 6))) {
+                                    score += 0.3;
                                 }
                             }
                             
@@ -465,12 +474,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                             }
                             
-                            // Bônus por rainha ativa (fora da posição inicial)
+                            // Bônus por rainha ativa
                             if (piece.toLowerCase() === 'q') {
                                 if (piece === 'q' && (row !== 0 || col !== 3)) {
-                                    score -= 0.5; // Rainha preta ativa
+                                    score -= 0.5;
                                 } else if (piece === 'Q' && (row !== 7 || col !== 3)) {
-                                    score += 0.5; // Rainha branca ativa
+                                    score += 0.5;
                                 }
                             }
                         }
@@ -491,8 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (chessBoard[row][col] === 'P') whitePawns++;
                         if (chessBoard[row][col] === 'p') blackPawns++;
                     }
-                    if (whitePawns > 1) score -= (whitePawns - 1) * 0.5; // Penalidade por peões brancos dobrados
-                    if (blackPawns > 1) score += (blackPawns - 1) * 0.5; // Penalidade por peões pretos dobrados
+                    if (whitePawns > 1) score -= (whitePawns - 1) * 0.5;
+                    if (blackPawns > 1) score += (blackPawns - 1) * 0.5;
                 }
                 
                 // Penalidade por rei exposto
@@ -517,6 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 
+                transpositionTable.set(boardKey, score);
                 return score;
             } catch (error) {
                 console.error('Erro em evaluateBoard:', error);
@@ -540,22 +550,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (captured) {
                         const capturedValue = pieceValues[captured] || 0;
                         const pieceValue = pieceValues[piece] || 0;
-                        priority += capturedValue * 10; // Bônus por capturar peças de maior valor
-                        if (capturedValue > pieceValue) priority += 50; // Bônus extra por capturas vantajosas
+                        priority += capturedValue * 10;
+                        if (capturedValue >= pieceValue) priority += 50;
                     }
                     
-                    // Prioridade para movimentos que colocam o rei adversário em xeque
+                    // Prioridade para xeque
                     chessBoard[toRow][toCol] = piece;
                     chessBoard[fromRow][fromCol] = '';
                     const opponentKing = findKing(opponent);
                     if (opponentKing) {
                         const [kingRow, kingCol] = opponentKing;
                         if (isSquareAttacked(kingRow, kingCol, player)) {
-                            priority += 100; // Bônus por xeque
+                            priority += 100;
                         }
                     }
                     chessBoard[fromRow][fromCol] = piece;
                     chessBoard[toRow][toCol] = captured;
+                    
+                    // Prioridade para controle do centro
+                    const centerPositions = new Set(['3,3', '3,4', '4,3', '4,4']);
+                    if (centerPositions.has(`${toRow},${toCol}`)) {
+                        priority += 10;
+                    }
                     
                     sortedMoves.push({ move, priority });
                 }
@@ -570,12 +586,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function minimax(depth, alpha, beta, maximizingPlayer) {
             try {
-                if (depth === 0 || gameState !== 'playing') {
-                    return evaluateBoard();
+                const boardKey = getBoardKey() + '|' + depth + '|' + maximizingPlayer;
+                if (transpositionTable.has(boardKey)) {
+                    return transpositionTable.get(boardKey);
                 }
+                
+                if (depth === 0 || gameState !== 'playing') {
+                    const evalScore = evaluateBoard();
+                    transpositionTable.set(boardKey, evalScore);
+                    return evalScore;
+                }
+                
                 const player = maximizingPlayer ? 'black' : 'white';
                 const moves = sortMoves(getAllPossibleMoves(player), player);
-                if (moves.length === 0) return maximizingPlayer ? -Infinity : Infinity;
+                if (moves.length === 0) {
+                    const result = maximizingPlayer ? -Infinity : Infinity;
+                    transpositionTable.set(boardKey, result);
+                    return result;
+                }
                 
                 if (maximizingPlayer) {
                     let maxEval = -Infinity;
@@ -598,6 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         if (beta <= alpha) break;
                     }
+                    transpositionTable.set(boardKey, maxEval);
                     return maxEval;
                 } else {
                     let minEval = Infinity;
@@ -620,6 +649,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         if (beta <= alpha) break;
                     }
+                    transpositionTable.set(boardKey, minEval);
                     return minEval;
                 }
             } catch (error) {
@@ -637,7 +667,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 let move;
                 if (difficulty === 'easy') {
-                    // Modo Fácil: 80% chance de movimento aleatório, 20% chance de captura
                     const captures = moves.filter(m => chessBoard[m.to[0]][m.to[1]] !== '');
                     if (captures.length > 0 && Math.random() < 0.2) {
                         move = captures[Math.floor(Math.random() * captures.length)];
@@ -645,7 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         move = moves[Math.floor(Math.random() * moves.length)];
                     }
                 } else {
-                    let depth = difficulty === 'medium' ? 4 : 6;
+                    let depth = difficulty === 'medium' ? 3 : 6; // Reduzido de 4 para 3 no modo Médio
                     let bestMove = null;
                     let bestValue = -Infinity;
                     
@@ -717,7 +746,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
                     resetGame();
                     if (currentPlayer === 'black') {
-                        setTimeout(makeAIMove, 500);
+                        setTimeout(makeAIMove, 300);
                     }
                 } else {
                     showNotification('Troca de lados só é permitida no modo Jogador vs IA.', 'error');
