@@ -65,7 +65,27 @@
             <button id="toggle-theme">Alternar Tema</button>
         </div>
         <div id="notification" class="notification"></div>
-        <div id="board" class="chess-board"></div>
+        <div class="board-wrapper">
+            <div class="top-labels">
+                <span>a</span><span>b</span><span>c</span><span>d</span>
+                <span>e</span><span>f</span><span>g</span><span>h</span>
+            </div>
+            <div class="board-container">
+                <div class="side-labels left-labels">
+                    <span>8</span><span>7</span><span>6</span><span>5</span>
+                    <span>4</span><span>3</span><span>2</span><span>1</span>
+                </div>
+                <div id="board" class="chess-board"></div>
+                <div class="side-labels right-labels">
+                    <span>8</span><span>7</span><span>6</span><span>5</span>
+                    <span>4</span><span>3</span><span>2</span><span>1</span>
+                </div>
+            </div>
+            <div class="bottom-labels">
+                <span>a</span><span>b</span><span>c</span><span>d</span>
+                <span>e</span><span>f</span><span>g</span><span>h</span>
+            </div>
+        </div>
         <div class="info-panel">
             <div id="turn-indicator">Vez das: <span>Brancas</span></div>
             <div id="status">Jogo em andamento</div>

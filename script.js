@@ -43,8 +43,18 @@ document.addEventListener('DOMContentLoaded', () => {
             'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 100
         };
         
-        // Transposition Table para armazenar avaliações
+        // Transposition Table com limite de tamanho
         const transpositionTable = new Map();
+        const maxTranspositionEntries = 10000;
+        
+        function manageTranspositionTable() {
+            if (transpositionTable.size > maxTranspositionEntries) {
+                const keys = Array.from(transpositionTable.keys());
+                for (let i = 0; i < keys.length / 2; i++) {
+                    transpositionTable.delete(keys[i]);
+                }
+            }
+        }
         
         function showNotification(message, type = 'success') {
             notification.textContent = message;
@@ -100,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         switchPlayer();
                         if (gameMode === 'pve' && gameState === 'playing' && currentPlayer === 'black') {
                             console.log('Acionando IA...');
-                            setTimeout(makeAIMove, 300); // Reduzido de 500ms para 300ms
+                            setTimeout(makeAIMove, 100); // Reduzido de 300ms para 100ms
                         }
                     } else if (fromRow === row && fromCol === col) {
                         selectedPiece = null;
@@ -304,16 +314,94 @@ document.addEventListener('DOMContentLoaded', () => {
         function getAllPossibleMoves(player) {
             try {
                 const moves = [];
+                const isWhite = player === 'white';
+                
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
                         const piece = chessBoard[row][col];
-                        if (piece && ((player === 'white' && piece === piece.toUpperCase()) ||
-                                     (player === 'black' && piece === piece.toLowerCase()))) {
-                            for (let r = 0; r < 8; r++) {
-                                for (let c = 0; c < 8; c++) {
-                                    if (isValidMove(row, col, r, c)) {
-                                        moves.push({ from: [row, col], to: [r, c] });
+                        if (!piece || (isWhite && piece !== piece.toUpperCase()) || (!isWhite && piece !== piece.toLowerCase())) continue;
+                        
+                        const pieceType = piece.toLowerCase();
+                        if (pieceType === 'p') {
+                            const direction = isWhite ? -1 : 1;
+                            const startRow = isWhite ? 6 : 1;
+                            // Movimento para frente
+                            if (row + direction >= 0 && row + direction < 8 && !chessBoard[row + direction][col]) {
+                                moves.push({ from: [row, col], to: [row + direction, col] });
+                                // Movimento duplo inicial
+                                if (row === startRow && !chessBoard[row + 2 * direction][col] && !chessBoard[row + direction][col]) {
+                                    moves.push({ from: [row, col], to: [row + 2 * direction, col] });
+                                }
+                            }
+                            // Capturas
+                            if (row + direction >= 0 && row + direction < 8) {
+                                if (col - 1 >= 0 && chessBoard[row + direction][col - 1] && !isSameColor(piece, chessBoard[row + direction][col - 1])) {
+                                    moves.push({ from: [row, col], to: [row + direction, col - 1] });
+                                }
+                                if (col + 1 < 8 && chessBoard[row + direction][col + 1] && !isSameColor(piece, chessBoard[row + direction][col + 1])) {
+                                    moves.push({ from: [row, col], to: [row + direction, col + 1] });
+                                }
+                            }
+                        } else if (pieceType === 'n') {
+                            const knightMoves = [
+                                [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+                                [1, -2], [1, 2], [2, -1], [2, 1]
+                            ];
+                            for (const [dr, dc] of knightMoves) {
+                                const r = row + dr;
+                                const c = col + dc;
+                                if (r >= 0 && r < 8 && c >= 0 && c < 8 && (!chessBoard[r][c] || !isSameColor(piece, chessBoard[r][c]))) {
+                                    moves.push({ from: [row, col], to: [r, c] });
+                                }
+                            }
+                        } else if (pieceType === 'b' || pieceType === 'q') {
+                            const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+                            if (pieceType === 'q') {
+                                directions.push([1, 0], [-1, 0], [0, 1], [0, -1]);
+                            }
+                            for (const [dr, dc] of directions) {
+                                let r = row + dr;
+                                let c = col + dc;
+                                while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+                                    if (chessBoard[r][c]) {
+                                        if (!isSameColor(piece, chessBoard[r][c])) {
+                                            moves.push({ from: [row, col], to: [r, c] });
+                                        }
+                                        break;
                                     }
+                                    moves.push({ from: [row, col], to: [r, c] });
+                                    r += dr;
+                                    c += dc;
+                                }
+                            }
+                        } else if (pieceType === 'r' || (pieceType === 'q' && false)) {
+                            const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                            for (const [dr, dc] of directions) {
+                                let r = row + dr;
+                                let c = col + dc;
+                                while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+                                    if (chessBoard[r][c]) {
+                                        if (!isSameColor(piece, chessBoard[r][c])) {
+                                            moves.push({ from: [row, col], to: [r, c] });
+                                        }
+                                        break;
+                                    }
+                                    moves.push({ from: [row, col], to: [r, c] });
+                                    r += dr;
+                                    c += dc;
+                                }
+                            }
+                        } else if (pieceType === 'k') {
+                            const kingMoves = [
+                                [-1, -1], [-1, 0], [-1, 1],
+                                [0, -1], [0, 1],
+                                [1, -1], [1, 0], [1, 1]
+                            ];
+                            for (const [dr, dc] of kingMoves) {
+                                const r = row + dr;
+                                const c = col + dc;
+                                if (r >= 0 && r < 8 && c >= 0 && c < 8 && (!chessBoard[r][c] || !isSameColor(piece, chessBoard[r][c]))) {
+                                    moves.push({ from: [row, col], to: [r, c] });
                                 }
                             }
                         }
@@ -412,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentPlayer = 'white';
                 gameState = 'playing';
                 statusDisplay.textContent = 'Jogo em andamento';
-                transpositionTable.clear(); // Limpar a tabela de transposição
+                transpositionTable.clear();
                 initializeBoard();
                 showNotification('Jogo reiniciado.', 'success');
             } catch (error) {
@@ -421,7 +509,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Função para gerar uma chave única para a posição do tabuleiro
         function getBoardKey() {
             return chessBoard.map(row => row.join('')).join('|') + '|' + currentPlayer;
         }
@@ -434,11 +521,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 let score = 0;
-                
-                // Pré-calcular posições centrais
                 const centerPositions = new Set(['3,3', '3,4', '4,3', '4,4']);
                 
-                // Avaliação material e bônus posicionais
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
                         const piece = chessBoard[row][col];
@@ -446,12 +530,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             const value = pieceValues[piece];
                             score += piece === piece.toUpperCase() ? value : -value;
                             
-                            // Bônus por controle do centro
                             if (centerPositions.has(`${row},${col}`)) {
                                 score += piece === piece.toUpperCase() ? 0.5 : -0.5;
                             }
                             
-                            // Bônus por desenvolvimento
                             if (piece.toLowerCase() === 'n' || piece.toLowerCase() === 'b') {
                                 if (piece === piece.toLowerCase() && (row !== 0 || (col !== 1 && col !== 6))) {
                                     score -= 0.3;
@@ -460,7 +542,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                             }
                             
-                            // Bônus por torre em coluna aberta
                             if (piece.toLowerCase() === 'r') {
                                 let isOpenColumn = true;
                                 for (let r = 0; r < 8; r++) {
@@ -474,7 +555,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                             }
                             
-                            // Bônus por rainha ativa
                             if (piece.toLowerCase() === 'q') {
                                 if (piece === 'q' && (row !== 0 || col !== 3)) {
                                     score -= 0.5;
@@ -486,13 +566,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 
-                // Bônus por mobilidade
                 const whiteMoves = getAllPossibleMoves('white').length;
                 const blackMoves = getAllPossibleMoves('black').length;
                 score += whiteMoves * 0.1;
                 score -= blackMoves * 0.1;
                 
-                // Penalidade por peões dobrados
                 for (let col = 0; col < 8; col++) {
                     let whitePawns = 0;
                     let blackPawns = 0;
@@ -504,7 +582,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (blackPawns > 1) score += (blackPawns - 1) * 0.5;
                 }
                 
-                // Penalidade por rei exposto
                 const whiteKing = findKing('white');
                 const blackKing = findKing('black');
                 if (whiteKing) {
@@ -527,6 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 transpositionTable.set(boardKey, score);
+                manageTranspositionTable();
                 return score;
             } catch (error) {
                 console.error('Erro em evaluateBoard:', error);
@@ -546,7 +624,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const captured = chessBoard[toRow][toCol];
                     let priority = 0;
                     
-                    // Prioridade para capturas
                     if (captured) {
                         const capturedValue = pieceValues[captured] || 0;
                         const pieceValue = pieceValues[piece] || 0;
@@ -554,7 +631,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (capturedValue >= pieceValue) priority += 50;
                     }
                     
-                    // Prioridade para xeque
                     chessBoard[toRow][toCol] = piece;
                     chessBoard[fromRow][fromCol] = '';
                     const opponentKing = findKing(opponent);
@@ -567,7 +643,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     chessBoard[fromRow][fromCol] = piece;
                     chessBoard[toRow][toCol] = captured;
                     
-                    // Prioridade para controle do centro
                     const centerPositions = new Set(['3,3', '3,4', '4,3', '4,4']);
                     if (centerPositions.has(`${toRow},${toCol}`)) {
                         priority += 10;
@@ -674,7 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         move = moves[Math.floor(Math.random() * moves.length)];
                     }
                 } else {
-                    let depth = difficulty === 'medium' ? 3 : 6; // Reduzido de 4 para 3 no modo Médio
+                    let depth = difficulty === 'medium' ? 2 : 4; // Reduzido para 2 (Médio) e 4 (Impossível)
                     let bestMove = null;
                     let bestValue = -Infinity;
                     
@@ -746,7 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
                     resetGame();
                     if (currentPlayer === 'black') {
-                        setTimeout(makeAIMove, 300);
+                        setTimeout(makeAIMove, 100);
                     }
                 } else {
                     showNotification('Troca de lados só é permitida no modo Jogador vs IA.', 'error');
